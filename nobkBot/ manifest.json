@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Nobk Title Manager (Dinamik)",
+  "version": "2.0",
+  "description": "Hyperbeam chat'te !title komutunu algılayıp vercel server'dan başlığı alır.",
+  "permissions": ["storage", "scripting", "activeTab"],
+  "content_scripts": [
+    {
+      "matches": ["*://*.hyperbeam.com/*"],
+      "js": ["hyperbeamTitleManager.js"]
+    }
+  ],
+  "host_permissions": ["*://*.vercel.app/*"]
+}
