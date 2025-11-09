@@ -1,0 +1,37 @@
+.custom-badge-img {
+  width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  vertical-align: middle;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.userNameContainer_3qH0y {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap; 
+}
+
+.userName_2Rhmz {
+  margin-left: 2px;
+}
+
+/* --- YENİ EKLENEN STİLLER --- */
+
+/* Mesajın ana kabuğunu (avatar, içerik, butonlar)
+   göreli (relative) olarak ayarla ki,
+   tarihi buna göre konumlandırabilelim. */
+.message_1Ng5r > div {
+  position: relative;
+}
+
+/* Taşınan tarih için yeni stil */
+.custom-time-right {
+  position: absolute;
+  top: 6px;      /* Hyperbeam'in ayar butonuyla aynı dikey hizaya getir */
+  right: 40px;   /* Ayar butonunun (sağdaki 3 nokta) solunda duracak şekilde ayarla */
+  font-size: 0.75rem; /* 12px */
+  color: #9a9a9a; /* Soluk gri renk (veya #8e8e8e) */
+  z-index: 1;
+}

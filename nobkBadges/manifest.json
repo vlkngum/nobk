@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Nobk Badges",
+  "version": "1.0",
+  "description": "nobk badge.",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://tutturu.it/*",
+        "https://hyperbeam.com/*"
+      ],
+      "js": ["badge.js"],
+      "css": ["style.css"]
+    }
+  ],
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://nobk-badge-back.vercel.app/api/get-badges"
+  ]
+}
