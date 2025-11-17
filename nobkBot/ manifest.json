@@ -10,5 +10,7 @@
       "js": ["hyperbeamTitleManager.js"]
     }
   ],
-  "host_permissions": ["*://*.vercel.app/*"]
+  "host_permissions": [
+    "https://nobk-badge-back.vercel.app/*"
+  ]
 }

@@ -1,53 +1,72 @@
 (async () => {
   // 7TV API'den emote setini dinamik olarak yükle
   async function load7TVEmotes() {
-    try {
-      const EMOTE_SET_ID = '01JKR969M7FQ4R5G8YYHM4G2AE';
-      const response = await fetch(`https://7tv.io/v3/emote-sets/${EMOTE_SET_ID}`);
-      const data = await response.json();
-      
-      // Emote'ları map'e dönüştür - İsimleri orijinal haliyle tut
-      const emojiMap = {};
-      if (data.emotes && Array.isArray(data.emotes)) {
-        data.emotes.forEach(emote => {
-          const name = emote.name;
-          const id = emote.id;
-          emojiMap[name] = `https://cdn.7tv.app/emote/${id}/4x.webp`;
-        });
-      }
-      
-      console.log('7TV emotes loaded:', Object.keys(emojiMap).length);
-      return emojiMap;
-    } catch (error) {
-      console.error('7TV emotes yüklenemedi:', error);
+  try {
+    const EMOTE_SET_ID = '01JKR969M7FQ4R5G8YYHM4G2AE';
+    const response = await fetch(`https://7tv.io/v3/emote-sets/${EMOTE_SET_ID}`);
+
+    if (!response.ok) {
+      console.error("7TV API hata:", response.status);
       return {};
     }
+
+    const data = await response.json();
+
+    if (!data.emotes || !Array.isArray(data.emotes)) {
+      console.error("7TV emote datası geçersiz:", data);
+      return {};
+    }
+
+    const emojiMap = {};
+
+    data.emotes.forEach(e => {
+      if (!e || !e.id || !e.name) return;
+      emojiMap[e.name] = `https://cdn.7tv.app/emote/${e.id}/4x.webp`;
+    });
+
+    console.log('7TV emotes loaded:', Object.keys(emojiMap).length);
+    return emojiMap;
+
+  } catch (error) {
+    console.error('7TV emotes yüklenemedi:', error);
+    return {};
   }
+}
+
 
   // Local emoji.json dosyasını yükle
   async function loadLocalEmojis() {
-    try {
-      const url = (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL)
-        ? chrome.runtime.getURL("emoji.json")
-        : "emoji.json";
-      const res = await fetch(url);
-      const localEmojis = await res.json();
-      
-      // Local emoji URL'lerini düzenle
-      const processedEmojis = {};
-      for (const [key, value] of Object.entries(localEmojis)) {
-        processedEmojis[key] = (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL)
-          ? chrome.runtime.getURL(value)
-          : value;
-      }
-      
-      console.log('Local emojis loaded:', Object.keys(processedEmojis).length);
-      return processedEmojis;
-    } catch (error) {
-      console.error('Local emojis yüklenemedi:', error);
+  try {
+    const url = chrome?.runtime?.getURL
+      ? chrome.runtime.getURL("emoji.json")
+      : "emoji.json";
+
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error("Local emoji dosyası okunamadı:", res.status);
       return {};
     }
+
+    const json = await res.json();
+    const out = {};
+
+    for (const key in json) {
+      const fileUrl = chrome?.runtime?.getURL
+        ? chrome.runtime.getURL(json[key])
+        : json[key];
+
+      out[key] = fileUrl;
+    }
+
+    console.log("Local emojis loaded:", Object.keys(out).length);
+    return out;
+
+  } catch (error) {
+    console.error('Local emojis yüklenemedi:', error);
+    return {};
   }
+}
+
 
   // Her iki kaynaktan emoji yükle ve birleştir
   const [tvEmotes, localEmotes] = await Promise.all([
@@ -122,70 +141,69 @@
   observer.observe(chatContainer, { childList: true, subtree: true, characterData: true });
   document.querySelectorAll(".ce-msg").forEach(msg => replaceEmojis(msg));
 
-  function escapeRegex(s) {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
-  const patterns = Object.keys(emojiMap).map(key => ({
-    key,
-    regex: new RegExp(`\\b${escapeRegex(key)}\\b`, 'i'),
-    url: emojiMap[key],
-    source: tvEmotes[key] ? '7tv' : 'local' // Kaynak bilgisi
-  }));
-  
-  console.debug('patterns loaded:', patterns.length);
-  try { window.__emojiPatterns = patterns; } catch (e) {}
+  const patterns = Object.keys(emojiMap).map(key => {
+    const safe = escapeRegex(key);
+
+    return {
+      key,
+      // split'te doğru çalışması için sadece kelimeyi yakalayan grup
+      regex: new RegExp(`(^|[^\\p{L}\\p{N}_])(${safe})(?=([^\\p{L}\\p{N}_]|$))`, "u"),
+      url: emojiMap[key]
+    };
+  });
+
+console.debug('patterns loaded:', patterns.length);
+try { window.__emojiPatterns = patterns; } catch (e) {}
 
   function replaceEmojis(root) {
-    try {
-      const enabled = window.__emojiReplacerEnabled === undefined
-        ? (localStorage.getItem('emojiReplacerEnabled') !== 'false')
-        : !!window.__emojiReplacerEnabled;
-      if (!enabled) return;
-    } catch (e) {}
-    
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-      acceptNode(node) {
-        if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-        const parentTag = node.parentElement && node.parentElement.tagName;
-        if (!parentTag) return NodeFilter.FILTER_REJECT;
-        const skipTags = ['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'CODE', 'PRE'];
-        if (skipTags.includes(parentTag)) return NodeFilter.FILTER_REJECT;
-        if (node.parentElement.isContentEditable) return NodeFilter.FILTER_REJECT;
-        return NodeFilter.FILTER_ACCEPT;
-      }
-    }, false);
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
 
-    const toReplace = [];
-    while (walker.nextNode()) {
-      const textNode = walker.currentNode;
-      for (const p of patterns) {
-        if (p.regex.test(textNode.nodeValue)) {
-          toReplace.push({ textNode, pattern: p });
-          break;
-        }
+  const pending = [];
+
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    const txt = node.nodeValue;
+
+    if (!txt || !txt.trim()) continue;
+
+    for (const p of patterns) {
+      if (p.regex.test(txt)) {
+        pending.push({ node, pattern: p });
+        break;
+      }
+    }
+  }
+
+  pending.forEach(({ node, pattern }) => {
+    const parent = node.parentNode;
+    const safe = escapeRegex(pattern.key);
+    const splitRegex = new RegExp(
+      `(^|[^\\p{L}\\p{N}_])(${safe})(?=([^\\p{L}\\p{N}_]|$))`,
+      "u"
+    );
+    const parts = node.nodeValue.split(splitRegex);
+
+    for (let part of parts) {
+      if (!part) continue;
+      if (part.localeCompare(pattern.key, 'tr', { sensitivity: 'accent' }) === 0) {
+        const img = document.createElement("img");
+        img.src = pattern.url;
+        img.style.height = "32px";
+        img.style.verticalAlign = "middle";
+        parent.insertBefore(img, node);
+      } else {
+        parent.insertBefore(document.createTextNode(part), node);
       }
     }
 
-    toReplace.forEach(({ textNode, pattern }) => {
-      const parent = textNode.parentNode;
-      const parts = textNode.nodeValue.split(new RegExp(`(${pattern.regex.source})`, 'i'));
-      for (let i = 0; i < parts.length; i++) {
-        const part = parts[i];
-        if (!part) continue;
-        if (i % 2 === 1) {
-          const img = document.createElement('img');
-          img.src = pattern.url;
-          img.style.height = '32px';
-          img.style.verticalAlign = 'middle';
-          parent.insertBefore(img, textNode);
-        } else {
-          parent.insertBefore(document.createTextNode(part), textNode);
-        }
-      }
-      parent.removeChild(textNode);
-    });
-  }
+    parent.removeChild(node);
+  });
+}
+
 
   function ensureEmojiPanel() {
     if (document.querySelector('#emoji-panel-button')) return;
