@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "NOBK Overlay",
+  "version": "1.0",
+  "description": "dex.",
+  "permissions": ["storage", "scripting"],
+  "host_permissions": [
+    "https://hyperbeam.com/*",
+    "https://nobk-badge-back.vercel.app/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://hyperbeam.com/*"],
+      "js": ["nobkOverlay.js"],
+      "css": ["style.css"]
+    }
+  ]
+}
