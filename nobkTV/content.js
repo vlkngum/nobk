@@ -162,47 +162,98 @@ try { window.__emojiPatterns = patterns; } catch (e) {}
   function replaceEmojis(root) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
 
-  const pending = [];
-
+  const nodes = [];
   while (walker.nextNode()) {
-    const node = walker.currentNode;
-    const txt = node.nodeValue;
-
-    if (!txt || !txt.trim()) continue;
-
-    for (const p of patterns) {
-      if (p.regex.test(txt)) {
-        pending.push({ node, pattern: p });
-        break;
-      }
-    }
+    const n = walker.currentNode;
+    if (!n.nodeValue || !n.nodeValue.trim()) continue;
+    nodes.push(n);
   }
 
-  pending.forEach(({ node, pattern }) => {
-    const parent = node.parentNode;
-    const safe = escapeRegex(pattern.key);
-    const splitRegex = new RegExp(
-      `(^|[^\\p{L}\\p{N}_])(${safe})(?=([^\\p{L}\\p{N}_]|$))`,
-      "u"
-    );
-    const parts = node.nodeValue.split(splitRegex);
+  for (const node of nodes) {
+    const txt = node.nodeValue;
+    const matches = [];
 
-    for (let part of parts) {
-      if (!part) continue;
-      if (part.localeCompare(pattern.key, 'tr', { sensitivity: 'accent' }) === 0) {
-        const img = document.createElement("img");
-        img.src = pattern.url;
-        img.style.height = "32px";
-        img.style.verticalAlign = "middle";
-        parent.insertBefore(img, node);
-      } else {
-        parent.insertBefore(document.createTextNode(part), node);
+    // Her pattern için tüm eşleşmeleri topla
+    for (const p of (window.__emojiPatterns || [])) {
+      // pattern.regex, (^|prefix)(emote)(?=suffix) gibi capture grupları içeriyor varsayımıyla çalışıyoruz
+      // global + unicode flag'leriyle yeniden oluştur
+      let flags = "gu";
+      try {
+        // mevcut regex'in flag'lerini korumaya çalış, ama mutlaka 'g' ve 'u' ekle
+        const existingFlags = (p.regex && p.regex.flags) ? p.regex.flags : "";
+        flags = Array.from(new Set(existingFlags.split("").concat(["g","u"]))).join("");
+      } catch (e) {
+        flags = "gu";
+      }
+      const rx = new RegExp(p.regex.source, flags);
+
+      let m;
+      while ((m = rx.exec(txt)) !== null) {
+        // bizim regex'imizde emote grup 2'de ( (^|prefix)(EMOTE) ... )
+        // eğer farklıysa burada ayarlaman gerekir
+        const prefixLen = (m[1] != null) ? String(m[1]).length : 0;
+        const emoteText = m[2] != null ? m[2] : m[0];
+        const emoteStart = m.index + prefixLen;
+        const emoteEnd = emoteStart + emoteText.length;
+
+        matches.push({
+          start: emoteStart,
+          end: emoteEnd,
+          key: p.key,
+          url: p.url,
+          text: emoteText,
+          priority: 0 // ileriye dönük çakışma çözümü
+        });
+
+        // Guard: sonsuz döngü olmasın (bozuk regex vs.)
+        if (rx.lastIndex === m.index) rx.lastIndex++;
       }
     }
 
-    parent.removeChild(node);
-  });
+    if (matches.length === 0) continue;
+
+    // Sırala ve örtüşmeleri temizle (ilk bulunan, sonra gelenleri at)
+    matches.sort((a,b) => a.start - b.start || a.end - b.end);
+    const filtered = [];
+    let lastEnd = -1;
+    for (const mt of matches) {
+      if (mt.start >= lastEnd) {
+        filtered.push(mt);
+        lastEnd = mt.end;
+      } else {
+        // örtüşme varsa: basit kural => daha önceki match'i tut, örtüşeni at
+        // (isteğe göre farklı strateji uygulanabilir)
+      }
+    }
+
+    // DocumentFragment inşa et
+    const frag = document.createDocumentFragment();
+    let cursor = 0;
+    for (const m of filtered) {
+      if (m.start > cursor) {
+        frag.appendChild(document.createTextNode(txt.slice(cursor, m.start)));
+      }
+
+      const img = document.createElement('img');
+      img.src = m.url;
+      img.alt = m.key;
+      img.title = m.key;
+      img.style.height = '32px';
+      img.style.verticalAlign = 'middle';
+      frag.appendChild(img);
+
+      cursor = m.end;
+    }
+    if (cursor < txt.length) {
+      frag.appendChild(document.createTextNode(txt.slice(cursor)));
+    }
+
+    // Orijinal text düğümünü frag ile değiştir
+    const parent = node.parentNode;
+    if (parent) parent.replaceChild(frag, node);
+  }
 }
+
 
 
   function ensureEmojiPanel() {
@@ -392,70 +443,80 @@ try { window.__emojiPatterns = patterns; } catch (e) {}
     document.querySelectorAll('.ce-msg').forEach(m => replaceEmojis(m));
   };
 
-  function insertToComposer(text) {
-    const ta = document.querySelector('.ce-textarea');
-    if (ta && ta.tagName === 'TEXTAREA') {
-      ta.focus();
-      try {
-        const start = (typeof ta.selectionStart === 'number') ? ta.selectionStart : ta.value.length;
-        const end = (typeof ta.selectionEnd === 'number') ? ta.selectionEnd : start;
-        const val = ta.value;
-        ta.value = val.slice(0, start) + text + val.slice(end);
-        ta.selectionStart = ta.selectionEnd = start + text.length;
-        ta.dispatchEvent(new Event('input', { bubbles: true }));
-        return;
-      } catch (e) {
-        ta.value += text;
-        ta.dispatchEvent(new Event('input', { bubbles: true }));
-        return;
-      }
-    }
+  function fixPlaceholderBug(ta) {
+  if (ta.value === "" || ta.value == null) {
+    ta.value = "";
+    ta.dispatchEvent(new Event("input", { bubbles: true }));
+    ta.focus();
+  }
+}
 
-    const ce = document.querySelector('.ce-msgbox.richTextArea_2hdAB[contenteditable="true"], .richTextArea_2hdAB[contenteditable="true"], .ce-msgbox[contenteditable="true"]');
-    if (ce) {
-      ce.focus();
-      try {
-        if (document.queryCommandSupported && document.queryCommandSupported('insertText')) {
-          const ok = document.execCommand('insertText', false, text);
-          if (ok) {
-            try { ce.dispatchEvent(new InputEvent('input', { bubbles: true })); } catch (e) {}
-            return;
-          }
-        }
-      } catch (e) {}
+function insertToComposer(text) {
+  const ta = document.querySelector('.ce-textarea');
+  if (ta && ta.tagName === 'TEXTAREA') {
 
-      const sel = window.getSelection();
-      try {
-        let didInsert = false;
-        if (sel && sel.rangeCount > 0) {
-          const range = sel.getRangeAt(0);
-          if (ce.contains(range.startContainer)) {
-            range.deleteContents();
-            const node = document.createTextNode(text);
-            range.insertNode(node);
-            range.setStartAfter(node);
-            range.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(range);
-            didInsert = true;
-          }
-        }
-        if (!didInsert) {
-          const node = document.createTextNode(text);
-          ce.appendChild(node);
-          const range2 = document.createRange();
-          range2.selectNodeContents(ce);
-          range2.collapse(false);
-          sel.removeAllRanges();
-          sel.addRange(range2);
-        }
-      } catch (e) {
-        ce.innerText = (ce.innerText || '') + text;
-      }
-      try { ce.dispatchEvent(new InputEvent('input', { bubbles: true })); } catch (e) {}
-      try { ce.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+    fixPlaceholderBug(ta);
+
+    try {
+      const start = (typeof ta.selectionStart === 'number') ? ta.selectionStart : ta.value.length;
+      const end = (typeof ta.selectionEnd === 'number') ? ta.selectionEnd : start;
+      const val = ta.value;
+
+      ta.value = val.slice(0, start) + text + val.slice(end);
+      ta.selectionStart = ta.selectionEnd = start + text.length;
+
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      return;
+    } catch (e) {
+      ta.value += text;
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      return;
     }
   }
+
+  const ce = document.querySelector('.ce-msgbox.richTextArea_2hdAB[contenteditable="true"], .richTextArea_2hdAB[contenteditable="true"], .ce-msgbox[contenteditable="true"]');
+
+  if (ce) {
+    ce.focus();
+
+    try {
+      if (document.queryCommandSupported && document.queryCommandSupported('insertText')) {
+        const ok = document.execCommand('insertText', false, text);
+        if (ok) {
+          ce.dispatchEvent(new InputEvent('input', { bubbles: true }));
+          return;
+        }
+      }
+    } catch {}
+
+    const sel = window.getSelection();
+    try {
+      let didInsert = false;
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        if (ce.contains(range.startContainer)) {
+          range.deleteContents();
+          const node = document.createTextNode(text);
+          range.insertNode(node);
+          range.setStartAfter(node);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+          didInsert = true;
+        }
+      }
+      if (!didInsert) {
+        const node = document.createTextNode(text);
+        ce.appendChild(node);
+      }
+    } catch {
+      ce.innerText = (ce.innerText || '') + text;
+    }
+
+    try { ce.dispatchEvent(new InputEvent('input', { bubbles: true })); } catch {}
+    try { ce.dispatchEvent(new Event('change', { bubbles: true })); } catch {}
+  }
+}
 
   try { ensureEmojiPanel(); } catch (e) {}
   try { makePostedEmojisClickable(); } catch (e) {}
