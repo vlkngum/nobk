@@ -16,5 +16,10 @@
       "resources": ["emoji.json", "emoji/*"],
       "matches": ["https://hyperbeam.com/*"]
     }
-  ]
+  ],
+  "host_permissions": [
+  "https://7tv.io/*",
+  "https://cdn.7tv.app/*"
+],
+"permissions": ["storage"]
 }
