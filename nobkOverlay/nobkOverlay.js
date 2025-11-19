@@ -3,9 +3,6 @@ console.log("[EXTENSION] nobkOverlay.js YÜKLENDİ");
 let lastPlayedUrl = null;
 let isPlaying = false;
 
-/* ─────────────────────────
-   KULLANICI ADI ALMA
-────────────────────────── */
 function getUsername() {
   let userImg = document.querySelector('button.userNameBtn_wpYSY img[alt]');
 
@@ -23,9 +20,6 @@ function getUsername() {
   return username;
 }
 
-/* ─────────────────────────
-   KULLANICI PUANI ALMA
-────────────────────────── */
 async function getUserScore(username) {
   try {
     const res = await fetch("https://nobk-badge-back.vercel.app/api/get-users");
@@ -45,9 +39,6 @@ async function getUserScore(username) {
   }
 }
 
-/* ─────────────────────────
-   PUAN -1 GÖNDERME
-────────────────────────── */
 async function decreaseScore(username) {
   try {
     const res = await fetch("https://nobk-badge-back.vercel.app/api/get-users", {
@@ -64,9 +55,6 @@ async function decreaseScore(username) {
   }
 }
 
-/* ─────────────────────────
-   BACKGROUND
-────────────────────────── */
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log("[BACKGROUND MESAJ ALINDI]", request);
 
@@ -107,9 +95,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 let allOverlays = [];
 
-/* ─────────────────────────
-   MODAL
-────────────────────────── */
 const modalOverlay = document.createElement("div");
 modalOverlay.id = "ganimet-modal-overlay";
 modalOverlay.innerHTML = `
@@ -128,9 +113,6 @@ modalOverlay.querySelector("#ganimet-search").addEventListener("input", e => {
   updateModal(e.target.value);
 });
 
-/* ─────────────────────────
-   LİSTELEME BUTONU
-────────────────────────── */
 const listButton = document.createElement("button");
 listButton.id = "ganimet-listele-btn";
 listButton.innerHTML = `
@@ -159,9 +141,6 @@ listButton.addEventListener("click", async () => {
   updateModal("");
 });
 
-/* ─────────────────────────
-   MODAL FİLTRELEME
-────────────────────────── */
 function updateModal(searchTerm = "") {
   const container = document.getElementById("ganimet-data-container");
   container.innerHTML = "";
@@ -182,9 +161,6 @@ function updateModal(searchTerm = "") {
   const itemEl = document.createElement("div");
   itemEl.className = "ganimet-item";
 
-  /* ────────────────
-     Küçük Video Önizleme
-  ───────────────── */
   const preview = document.createElement("video");
   preview.src = item.video_url;
   preview.muted = true;
@@ -201,16 +177,10 @@ function updateModal(searchTerm = "") {
   `;
   itemEl.appendChild(preview);
 
-  /* ────────────────
-     Başlık
-  ───────────────── */
   const name = document.createElement("strong");
   name.textContent = item.name;
   itemEl.appendChild(name);
 
-  /* ────────────────
-     Kullan Butonu
-  ───────────────── */
   const kullanBtn = document.createElement("button");
   kullanBtn.textContent = "Kullan";
   kullanBtn.className = "kullan-btn";
@@ -244,9 +214,6 @@ function updateModal(searchTerm = "") {
   container.appendChild(list);
 }
 
-/* ─────────────────────────
-   VİDEO OYNATMA
-────────────────────────── */
 function playVideoDirect(url) {
   const old = document.getElementById("video-overlay-player");
   if (old) old.remove();
@@ -287,9 +254,6 @@ function playVideoDirect(url) {
   document.body.appendChild(wrap);
 }
 
-/* ─────────────────────────
-   POLLING (Çift Oynatma FIX)
-────────────────────────── */
 async function checkActiveVideo() {
   try {
     if (isPlaying) return;
@@ -307,7 +271,6 @@ async function checkActiveVideo() {
     lastPlayedUrl = url;
     isPlaying = true;
 
-    // ÇALMADAN ÖNCE SİL — ÇİFT OYNATMAYI %100 ENGELLER
     fetch("https://nobk-badge-back.vercel.app/api/selected-video", {
       method: "DELETE",
     });
@@ -319,9 +282,6 @@ async function checkActiveVideo() {
   }
 }
 
-/* ─────────────────────────
-   EVENTS
-────────────────────────── */
 document.getElementById("ganimet-modal-close").addEventListener("click", () => {
   modalOverlay.style.display = "none";
 });
