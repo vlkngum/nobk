@@ -32,7 +32,7 @@ function injectBadges(messageElement) {
       
       userBadges.forEach(badgeInfo => {
         const img = document.createElement('img');
-        img.src = badgeInfo.url; // ✅ 'image_url' değil, 'url' olmalı
+        img.src = badgeInfo.url; 
         img.className = 'custom-badge-img';
         img.title = badgeInfo.name; 
         
@@ -67,7 +67,6 @@ function startObserver() {
   document.querySelectorAll('.message_1Ng5r').forEach(injectBadges);
 }
 
-// ARKA PLANDAN VERİYİ İSTE
 chrome.runtime.sendMessage({ action: "getBadgeData" }, (response) => {
   console.log('Arka plandan gelen HAM YANIT (response):', response); 
   console.log('Response yapısı:', JSON.stringify(response, null, 2));
@@ -77,7 +76,6 @@ chrome.runtime.sendMessage({ action: "getBadgeData" }, (response) => {
     console.log('VERİ BAŞARILI: badgeData içeriği:', badgeData);
     console.log('Kullanıcı isimleri:', Object.keys(badgeData));
     
-    // Her kullanıcının rozetlerini göster
     Object.keys(badgeData).forEach(username => {
       console.log(`${username} kullanıcısının rozetleri:`, badgeData[username]);
     });
@@ -86,4 +84,5 @@ chrome.runtime.sendMessage({ action: "getBadgeData" }, (response) => {
   } else {
     console.error('VERİ HATASI:', response ? response.error : 'Bilinmeyen bir hata.');
   }
+
 });
