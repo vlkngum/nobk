@@ -78,7 +78,7 @@
   color: #aaa;
   cursor: pointer;
   line-height: 1;
-  padding: 0; /* Ekstra boşlukları kaldır */
+  padding: 0; 
 }
 
 #ganimet-modal-close:hover {
