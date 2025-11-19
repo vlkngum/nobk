@@ -26,10 +26,6 @@ document.body.appendChild(nobkText);
 let lastSeenTitleFromServer = null;
 let lastProcessedMessageText = null;
 
-
-// --------------------------------------------------
-// GET – Sunucudan başlık çek
-// --------------------------------------------------
 async function getTitleFromServer() {
   try {
     const res = await fetch(TITLE_API, { method: "GET", credentials: "omit" });
@@ -50,12 +46,9 @@ async function getTitleFromServer() {
 }
 
 
-// --------------------------------------------------
-// PATCH – Yeni başlığı server'a gönder
-// --------------------------------------------------
 async function patchTitleToServer(newTitle) {
   try {
-    console.log("📤 PATCH gönderiliyor:", newTitle);
+    console.log("PATCH gönderiliyor:", newTitle);
 
     const res = await fetch(TITLE_API, {
       method: "PATCH",
@@ -68,23 +61,20 @@ async function patchTitleToServer(newTitle) {
     try { data = await res.json(); } catch(e) {}
 
     if (!res.ok) {
-      console.error("🚨 Server hata:", res.status, data);
+      console.error("Server hata:", res.status, data);
       return;
     }
 
     lastSeenTitleFromServer = newTitle;
     nobkText.textContent = newTitle;
 
-    console.log("✅ Başlık güncellendi:", newTitle);
+    console.log("Başlık güncellendi:", newTitle);
   } catch (err) {
-    console.error("🚨 PATCH gönderilemedi:", err);
+    console.error("PATCH gönderilemedi:", err);
   }
 }
 
 
-// --------------------------------------------------
-// Mesajları tarar – !title komutunu bulur
-// --------------------------------------------------
 function checkAllMessages() {
   const chatContainer = document.querySelector('.messageList_1GRn-');
   if (!chatContainer) return;
@@ -105,7 +95,7 @@ function checkAllMessages() {
       const newTitle = text.replace(/^!title\s+/, "").trim();
 
       if (newTitle) {
-        console.log("🎯 Yeni başlık:", newTitle);
+        console.log("Yeni başlık:", newTitle);
         patchTitleToServer(newTitle);
       }
       return;
@@ -113,10 +103,6 @@ function checkAllMessages() {
   }
 }
 
-
-// --------------------------------------------------
-// Chat observer (DOM değişimi yakalar)
-// --------------------------------------------------
 function initChatObserver() {
   console.log("👀 Chat Observer başlatılıyor...");
 
@@ -132,7 +118,7 @@ function initChatObserver() {
   const observer = new MutationObserver(() => {
     clearTimeout(checkTimer);
     checkTimer = setTimeout(() => {
-      console.log("🔄 DOM değişti, mesaj kontrol ediliyor...");
+      console.log("DOM değişti, mesaj kontrol ediliyor...");
       checkAllMessages();
     }, 100);
   });
@@ -143,25 +129,18 @@ function initChatObserver() {
     characterData: true
   });
 
-  console.log("✅ Observer aktif");
+  console.log("Observer aktif");
 }
 
-
-// --------------------------------------------------
-// Periyodik tarama
-// --------------------------------------------------
 function startPeriodicCheck() {
   setInterval(() => {
-    console.log("⏰ Periyodik kontrol...");
+    console.log("Periyodik kontrol...");
     checkAllMessages();
   }, 2000);
 }
 
 
-// --------------------------------------------------
-// Başlangıç
-// --------------------------------------------------
-console.log("🚀 Sistem başlatılıyor...");
+console.log("Sistem başlatılıyor...");
 getTitleFromServer();
 setInterval(getTitleFromServer, 5000);
 
