@@ -1,5 +1,4 @@
 (async () => {
-  // 7TV API'den emote setini dinamik olarak yükle
   async function load7TVEmotes() {
   try {
     const EMOTE_SET_ID = '01JKR969M7FQ4R5G8YYHM4G2AE';
@@ -34,7 +33,6 @@
 }
 
 
-  // Local emoji.json dosyasını yükle
   async function loadLocalEmojis() {
   try {
     const url = chrome?.runtime?.getURL
@@ -68,13 +66,11 @@
 }
 
 
-  // Her iki kaynaktan emoji yükle ve birleştir
   const [tvEmotes, localEmotes] = await Promise.all([
     load7TVEmotes(),
     loadLocalEmojis()
   ]);
 
-  // 7TV emote'ları öncelikli, sonra local emojiler (çakışma varsa 7TV kazanır)
   const emojiMap = { ...localEmotes, ...tvEmotes };
   
   console.log('Total emojis loaded:', Object.keys(emojiMap).length);
@@ -150,7 +146,6 @@
 
     return {
       key,
-      // split'te doğru çalışması için sadece kelimeyi yakalayan grup
       regex: new RegExp(`(^|[^\\p{L}\\p{N}_])(${safe})(?=([^\\p{L}\\p{N}_]|$))`, "u"),
       url: emojiMap[key]
     };
@@ -173,10 +168,7 @@ try { window.__emojiPatterns = patterns; } catch (e) {}
     const txt = node.nodeValue;
     const matches = [];
 
-    // Her pattern için tüm eşleşmeleri topla
     for (const p of (window.__emojiPatterns || [])) {
-      // pattern.regex, (^|prefix)(emote)(?=suffix) gibi capture grupları içeriyor varsayımıyla çalışıyoruz
-      // global + unicode flag'leriyle yeniden oluştur
       let flags = "gu";
       try {
         // mevcut regex'in flag'lerini korumaya çalış, ama mutlaka 'g' ve 'u' ekle
@@ -189,8 +181,6 @@ try { window.__emojiPatterns = patterns; } catch (e) {}
 
       let m;
       while ((m = rx.exec(txt)) !== null) {
-        // bizim regex'imizde emote grup 2'de ( (^|prefix)(EMOTE) ... )
-        // eğer farklıysa burada ayarlaman gerekir
         const prefixLen = (m[1] != null) ? String(m[1]).length : 0;
         const emoteText = m[2] != null ? m[2] : m[0];
         const emoteStart = m.index + prefixLen;
@@ -202,17 +192,15 @@ try { window.__emojiPatterns = patterns; } catch (e) {}
           key: p.key,
           url: p.url,
           text: emoteText,
-          priority: 0 // ileriye dönük çakışma çözümü
+          priority: 0 
         });
 
-        // Guard: sonsuz döngü olmasın (bozuk regex vs.)
         if (rx.lastIndex === m.index) rx.lastIndex++;
       }
     }
 
     if (matches.length === 0) continue;
 
-    // Sırala ve örtüşmeleri temizle (ilk bulunan, sonra gelenleri at)
     matches.sort((a,b) => a.start - b.start || a.end - b.end);
     const filtered = [];
     let lastEnd = -1;
@@ -220,10 +208,7 @@ try { window.__emojiPatterns = patterns; } catch (e) {}
       if (mt.start >= lastEnd) {
         filtered.push(mt);
         lastEnd = mt.end;
-      } else {
-        // örtüşme varsa: basit kural => daha önceki match'i tut, örtüşeni at
-        // (isteğe göre farklı strateji uygulanabilir)
-      }
+      } 
     }
 
     // DocumentFragment inşa et
@@ -248,7 +233,6 @@ try { window.__emojiPatterns = patterns; } catch (e) {}
       frag.appendChild(document.createTextNode(txt.slice(cursor)));
     }
 
-    // Orijinal text düğümünü frag ile değiştir
     const parent = node.parentNode;
     if (parent) parent.replaceChild(frag, node);
   }
@@ -259,7 +243,6 @@ try { window.__emojiPatterns = patterns; } catch (e) {}
   function ensureEmojiPanel() {
     if (document.querySelector('#emoji-panel-button')) return;
 
-    // Button (dex.png)
     const btn = document.createElement('button');
     btn.id = 'emoji-panel-button';
     btn.style.position = 'fixed';
