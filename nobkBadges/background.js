@@ -1,9 +1,8 @@
 const API_URL = 'https://nobk-badge-back.vercel.app/api/get-badges';
-const CACHE_DURATION = 60000; // 1 dakika (test için)
+const CACHE_DURATION = 60000; 
 
 async function fetchBadgeData() {
   try {
-    // Cache bypass ekle
     const response = await fetch(API_URL + '?t=' + Date.now(), {
       cache: 'no-store'
     });
@@ -35,7 +34,7 @@ async function getCachedBadgeData(forceRefresh = false) {
       console.log('📦 Cache içeriği:', cache);
       
       if (cache.badgeData && (Date.now() - cache.lastFetch < CACHE_DURATION)) {
-        console.log('♻️ Cache\'den yüklendi (geçerlilik süresi kaldı:', Math.round((CACHE_DURATION - (Date.now() - cache.lastFetch)) / 1000), 'saniye)');
+        console.log('Cache\'den yüklendi (geçerlilik süresi kaldı:', Math.round((CACHE_DURATION - (Date.now() - cache.lastFetch)) / 1000), 'saniye)');
         return { success: true, data: cache.badgeData };
       }
     }
@@ -58,7 +57,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   
-  // Cache'i manuel temizleme komutu
   if (request.action === 'clearCache') {
     (async () => {
       await chrome.storage.local.clear();
@@ -69,7 +67,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   
-  // Zorla yenileme komutu
   if (request.action === 'forceRefresh') {
     (async () => {
       const response = await getCachedBadgeData(true);
@@ -78,5 +75,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 });
+
 
  
