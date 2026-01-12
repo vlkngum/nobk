@@ -43,8 +43,8 @@ style.textContent = `
     #tts-send-btn:hover { background: #193aa0ff; }
     #tts-send-btn:disabled { background: #485460; cursor: not-allowed; color: #808e9b; }
     #tts-float-btn {
-        position: fixed; width: 45px; height: 45px; border-radius: 50%; font-size: 24px; 
-        background-color: #ff4757; color: white; border: none; cursor: pointer; z-index: 999999;
+        position: fixed; width: 50px; height: 50px; border-radius: 15%; font-size: 24px; 
+        background-color: #007bff; color: white; border: none; cursor: pointer; z-index: 999999;
         box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: transform 0.2s;
         display: flex; justify-content: center; align-items: center;
     }
